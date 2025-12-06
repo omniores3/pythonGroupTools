@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}数据管理 - Telegram采集系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-database"></i> 数据管理</h2>
+
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card bg-primary text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">总群组数</h6>
+                        <h2 id="totalGroups">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">总消息数</h6>
+                        <h2 id="totalMessages">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-info text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">今日新增</h6>
+                        <h2 id="todayMessages">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-warning text-white">
+                    <div class="card-body">
+                        <h6 class="card-title">运行任务</h6>
+                        <h2 id="runningTasks">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab导航 -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#groupsTab">
+                    <i class="bi bi-people"></i> 群组/频道
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#messagesTab">
+                    <i class="bi bi-chat-dots"></i> 消息列表
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#statisticsTab">
+                    <i class="bi bi-graph-up"></i> 统计图表
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab内容 -->
+        <div class="tab-content">
+            <!-- 群组Tab -->
+            <div class="tab-pane fade show active" id="groupsTab">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="groupSearch" placeholder="搜索群组名称...">
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button class="btn btn-success" onclick="exportData('groups', 'csv')">
+                                    <i class="bi bi-file-earmark-excel"></i> 导出CSV
+                                </button>
+                                <button class="btn btn-info" onclick="exportData('groups', 'json')">
+                                    <i class="bi bi-file-earmark-code"></i> 导出JSON
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>名称</th>
+                                        <th>用户名</th>
+                                        <th>成员数</th>
+                                        <th>采集时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="groupList">
+                                    <tr>
+                                        <td colspan="6" class="text-center">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav>
+                            <ul class="pagination justify-content-center" id="groupPagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 消息Tab -->
+            <div class="tab-pane fade" id="messagesTab">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="messageSearch" placeholder="搜索消息内容...">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="startDate">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="endDate">
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-success" onclick="exportData('messages', 'csv')">
+                                    <i class="bi bi-file-earmark-excel"></i> 导出
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>群组</th>
+                                        <th>发送者</th>
+                                        <th>内容</th>
+                                        <th>类型</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="messageList">
+                                    <tr>
+                                        <td colspan="6" class="text-center">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav>
+                            <ul class="pagination justify-content-center" id="messagePagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计Tab -->
+            <div class="tab-pane fade" id="statisticsTab">
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>最近7天消息趋势</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="dailyChart" height="80"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>群组消息分布 (Top 10)</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="groupChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>消息类型统计</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="typeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/data.js') }}"></script>
+{% endblock %}

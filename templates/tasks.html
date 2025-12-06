@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}任务管理 - Telegram采集系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-list-task"></i> 任务管理</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal" onclick="openCreateModal()">
+                <i class="bi bi-plus-circle"></i> 创建任务
+            </button>
+        </div>
+
+        <!-- 任务列表 -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>任务名称</th>
+                                <th>使用账号</th>
+                                <th>机器人</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskList">
+                            <tr>
+                                <td colspan="7" class="text-center">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页 -->
+                <nav>
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务创建/编辑模态框 -->
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskModalTitle">创建任务</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    
+                    <!-- 基础配置 -->
+                    <h6 class="mb-3">基础配置</h6>
+                    <div class="mb-3">
+                        <label class="form-label">任务名称 *</label>
+                        <input type="text" class="form-control" id="taskName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">使用账号 *</label>
+                        <select class="form-select" id="accountId" required>
+                            <option value="">加载中...</option>
+                        </select>
+                        <small class="text-muted">选择用于执行此任务的Telegram账号</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">任务类型 *</label>
+                        <select class="form-select" id="taskType" required>
+                            <option value="bot_search">通过机器人搜索群组/频道</option>
+                            <option value="direct_collect">直接采集指定群组/频道</option>
+                        </select>
+                        <small class="text-muted">选择采集方式</small>
+                    </div>
+                    
+                    <!-- 机器人搜索配置 -->
+                    <div id="botSearchConfig">
+                        <div class="alert alert-info">
+                            <strong><i class="bi bi-info-circle"></i> 使用说明：</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>输入一个可以搜索群组的机器人用户名</li>
+                                <li>输入搜索关键词，系统会发送给机器人</li>
+                                <li>支持多个关键词并发搜索</li>
+                                <li>支持翻页获取更多结果</li>
+                                <li><strong>注意：此模式只搜索群组列表，不采集消息</strong></li>
+                            </ul>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">目标机器人用户名 *</label>
+                            <input type="text" class="form-control" id="botUsername" placeholder="例如: @search_bot">
+                            <small class="text-muted">用于搜索群组/频道链接的机器人</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">搜索关键词 *</label>
+                            <textarea class="form-control" id="searchKeywords" rows="4" placeholder="每行一个关键词，支持并发搜索&#10;&#10;示例：&#10;crypto&#10;bitcoin&#10;trading"></textarea>
+                            <small class="text-muted">
+                                <strong>每行一个关键词</strong>，系统会依次发送给机器人进行搜索<br>
+                                多个关键词会并发执行，提高搜索效率
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- 直接采集配置 -->
+                    <div id="directCollectConfig" style="display: none;">
+                        <div class="alert alert-info">
+                            <strong><i class="bi bi-info-circle"></i> 使用说明：</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>直接输入要采集的群组/频道列表</li>
+                                <li>系统会加入这些群组并采集消息</li>
+                                <li>支持采集历史消息和实时监听</li>
+                                <li><strong>每行输入一个</strong>，支持多种格式</li>
+                            </ul>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">群组/频道列表 *</label>
+                            <textarea class="form-control" id="targetGroups" rows="6" placeholder="支持以下格式（每行一个）：&#10;@username&#10;https://t.me/username&#10;https://t.me/joinchat/xxxxx&#10;&#10;示例：&#10;@python_group&#10;https://t.me/crypto_news"></textarea>
+                            <small class="text-muted">
+                                <strong>格式示例：</strong><br>
+                                • 用户名格式：<code>@python_group</code><br>
+                                • 链接格式：<code>https://t.me/crypto_news</code><br>
+                                • 私有链接：<code>https://t.me/joinchat/AAAAAExxxxxx</code>
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- 过滤配置 -->
+                    <h6 class="mb-3 mt-4">过滤配置（可选）</h6>
+                    <div class="mb-3" id="groupRegexGroup">
+                        <label class="form-label">群组/频道名称正则表达式</label>
+                        <input type="text" class="form-control" id="groupRegex" placeholder="例如: .*crypto.*">
+                        <small class="text-muted">
+                            <strong>示例：</strong><br>
+                            • 包含crypto：<code>.*crypto.*</code><br>
+                            • 以BTC开头：<code>^BTC.*</code><br>
+                            • 留空表示不过滤
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3" id="messageRegexGroup" style="display: none;">
+                        <label class="form-label">消息内容正则表达式</label>
+                        <input type="text" class="form-control" id="messageRegex" placeholder="例如: .*bitcoin.*">
+                        <small class="text-muted">
+                            <strong>示例：</strong><br>
+                            • 包含bitcoin：<code>.*bitcoin.*</code><br>
+                            • 包含价格：<code>.*\$\d+.*</code><br>
+                            • 留空表示不过滤
+                        </small>
+                    </div>
+
+                    <!-- 采集配置（仅直接采集模式） -->
+                    <div id="collectConfig" style="display: none;">
+                        <h6 class="mb-3 mt-4">消息采集配置</h6>
+                        <div class="mb-3">
+                            <label class="form-label">采集模式</label>
+                            <select class="form-select" id="collectMode">
+                                <option value="both">采集历史消息 + 实时监听（推荐）</option>
+                                <option value="history_only">仅采集历史消息</option>
+                                <option value="realtime_only">仅实时监听新消息</option>
+                            </select>
+                            <small class="text-muted">
+                                <strong>说明：</strong><br>
+                                • <strong>采集历史 + 实时监听</strong>：先采集历史消息，然后持续监听新消息<br>
+                                • <strong>仅采集历史</strong>：只采集历史消息，完成后任务结束<br>
+                                • <strong>仅实时监听</strong>：不采集历史，只监听新发送的消息
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3" id="historyLimitGroup">
+                            <label class="form-label">历史消息采集数量</label>
+                            <input type="number" class="form-control" id="historyLimit" value="1000" min="10" max="10000">
+                            <small class="text-muted">
+                                <strong>建议值：</strong><br>
+                                • 小型群组（<1000人）：1000-2000条<br>
+                                • 中型群组（1000-5000人）：2000-5000条<br>
+                                • 大型群组（>5000人）：5000-10000条
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- 翻页配置（仅机器人搜索模式） -->
+                    <div id="paginationConfig">
+                        <h6 class="mb-3 mt-4">翻页配置（可选）</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">下一页按钮文字</label>
+                                <input type="text" class="form-control" id="nextButtonText" placeholder="例如: 下一页">
+                                <small class="text-muted">机器人消息中的翻页按钮文字</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">最大翻页次数</label>
+                                <input type="number" class="form-control" id="maxPages" value="10" min="1" max="50">
+                                <small class="text-muted">最多翻多少页（1-50）</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API推送配置 -->
+                    <h6 class="mb-3 mt-4">API推送配置</h6>
+                    <div class="mb-3">
+                        <label class="form-label">API地址</label>
+                        <input type="url" class="form-control" id="apiUrl" placeholder="https://api.example.com/webhook">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">请求方法</label>
+                        <select class="form-select" id="apiMethod">
+                            <option value="POST">POST</option>
+                            <option value="GET">GET</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">参数映射 (JSON格式)</label>
+                        <textarea class="form-control" id="apiParamMapping" rows="4" placeholder='{
+  "content": "message",
+  "sender_name": "user",
+  "message_date": "timestamp"
+}'></textarea>
+                        <small class="text-muted">定义如何将消息字段映射到API参数</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务详情模态框 -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">任务详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="taskDetailContent">
+                <!-- 动态加载 -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - Telegram采集系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="bi bi-telegram text-primary"></i>
+                Telegram群组/频道采集系统
+            </h1>
+            <p class="lead text-muted">智能化采集、实时监听、数据分析</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- 统计卡片 -->
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="stat-value" id="totalTasks">0</div>
+            <div class="stat-label">
+                <i class="bi bi-list-task"></i> 总任务数
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+            <div class="stat-value" id="totalGroups">0</div>
+            <div class="stat-label">
+                <i class="bi bi-people"></i> 采集群组数
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="stat-value" id="totalMessages">0</div>
+            <div class="stat-label">
+                <i class="bi bi-chat-dots"></i> 采集消息数
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <div class="stat-value" id="runningTasks">0</div>
+            <div class="stat-label">
+                <i class="bi bi-play-circle"></i> 运行中任务
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- 功能卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="mb-3">
+                    <i class="bi bi-person-circle text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">账号配置</h5>
+                <p class="card-text text-muted">配置Telegram API密钥，登录您的账号</p>
+                <a href="/auth" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> 前往配置
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="mb-3">
+                    <i class="bi bi-list-task text-success" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">任务管理</h5>
+                <p class="card-text text-muted">创建采集任务，配置过滤规则和API推送</p>
+                <a href="/tasks" class="btn btn-success">
+                    <i class="bi bi-arrow-right"></i> 管理任务
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="mb-3">
+                    <i class="bi bi-database text-info" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">数据管理</h5>
+                <p class="card-text text-muted">查看采集数据，导出分析，统计图表</p>
+                <a href="/data" class="btn btn-info text-white">
+                    <i class="bi bi-arrow-right"></i> 查看数据
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> 快速开始
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">
+                        <strong>配置账号：</strong>前往"账号配置"页面，输入Telegram API密钥并登录
+                    </li>
+                    <li class="mb-2">
+                        <strong>创建任务：</strong>在"任务管理"页面创建采集任务，配置机器人用户名、过滤规则等
+                    </li>
+                    <li class="mb-2">
+                        <strong>启动采集：</strong>启动任务后，系统将自动搜索群组、采集消息并实时监听
+                    </li>
+                    <li class="mb-0">
+                        <strong>查看数据：</strong>在"数据管理"页面查看采集结果，支持搜索、导出和统计分析
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    loadStatistics();
+    
+    // 每30秒刷新一次统计数据
+    setInterval(loadStatistics, 30000);
+});
+
+function loadStatistics() {
+    // 加载任务统计
+    $.get('/api/tasks', function(response) {
+        if (response.code === 200) {
+            $('#totalTasks').text(response.data.total);
+            
+            // 统计运行中的任务
+            let running = 0;
+            response.data.tasks.forEach(task => {
+                if (task.status === 'running') running++;
+            });
+            $('#runningTasks').text(running);
+        }
+    });
+    
+    // 加载群组统计
+    $.get('/api/data/groups', function(response) {
+        if (response.code === 200) {
+            $('#totalGroups').text(response.data.total);
+        }
+    });
+    
+    // 加载消息统计
+    $.get('/api/data/messages', function(response) {
+        if (response.code === 200) {
+            $('#totalMessages').text(response.data.total);
+        }
+    });
+}
+</script>
+{% endblock %}
