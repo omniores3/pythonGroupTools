@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}批量提交 - Telegram采集系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-send-check"></i> 批量提交</h2>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-gear"></i> 提交配置
+            </div>
+            <div class="card-body">
+                <form id="batchForm">
+                    <!-- API配置 -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">API地址 *</label>
+                            <input type="url" class="form-control" id="apiUrl" required
+                                   placeholder="https://api.example.com/webhook">
+                            <small class="text-muted">数据将提交到此API地址</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">请求方法 *</label>
+                            <select class="form-select" id="method" required>
+                                <option value="POST">POST</option>
+                                <option value="GET">GET</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">参数名称 *</label>
+                        <input type="text" class="form-control" id="paramName" value="data" required
+                               placeholder="data">
+                        <small class="text-muted">数据将以此参数名发送，例如：{"data": "内容"}</small>
+                    </div>
+                    
+                    <!-- 数据内容 -->
+                    <div class="mb-3">
+                        <label class="form-label">批量数据 *</label>
+                        <textarea class="form-control" id="content" rows="15" required
+                                  placeholder="每行一条数据，例如：&#10;https://t.me/group1&#10;https://t.me/group2&#10;https://t.me/group3"></textarea>
+                        <small class="text-muted">
+                            每行一条数据，系统将逐行提交到API接口。当前行数: <span id="lineCount">0</span>
+                        </small>
+                    </div>
+                    
+                    <!-- 提交按钮 -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send"></i> 开始提交
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                            <i class="bi bi-x-circle"></i> 清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 提交进度 -->
+        <div class="card mt-4" id="progressCard" style="display: none;">
+            <div class="card-header">
+                <i class="bi bi-hourglass-split"></i> 提交进度
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 30px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         id="progressBar" role="progressbar" style="width: 0%">
+                        0%
+                    </div>
+                </div>
+                <div class="text-center">
+                    <span id="progressText">准备提交...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 提交结果 -->
+        <div class="card mt-4" id="resultCard" style="display: none;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-check-circle"></i> 提交结果</span>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportResults()">
+                    <i class="bi bi-download"></i> 导出结果
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- 统计信息 -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="alert alert-info mb-0">
+                            <strong>总数:</strong> <span id="totalCount">0</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-success mb-0">
+                            <strong>成功:</strong> <span id="successCount">0</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-danger mb-0">
+                            <strong>失败:</strong> <span id="failCount">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 详细结果 -->
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>数据</th>
+                                <th>状态</th>
+                                <th>HTTP状态码</th>
+                                <th>错误信息</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/batch.js') }}"></script>
+{% endblock %}

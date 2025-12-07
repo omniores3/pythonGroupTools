@@ -15,7 +15,8 @@ class TelegramService:
         self.clients = {}  # {account_id: client}
         self.session_names = {}  # {account_id: session_name}
         self.listeners = {}  # {account_id: {group_id: handler}}
-        self._loops = {}  # {account_id: loop} 保存每个账号的event loop引用
+        self._loops = {}  # {account_id: loop} 每个账号的专用event loop
+        self._loop_threads = {}  # {account_id: thread} 每个账号的loop线程
     
     async def login(self, account_id, api_id, api_hash, phone):
         """登录Telegram"""
@@ -183,20 +184,56 @@ class TelegramService:
             if account_id in self._loops:
                 del self._loops[account_id]
     
-    def get_client(self, account_id=None):
-        """获取客户端实例"""
-        if account_id:
-            return self.clients.get(account_id)
-        # 如果没有指定account_id，返回活跃账号的client
-        account = Account.get_active()
-        if account:
-            return self.clients.get(account['id'])
-        return None
+    async def get_client(self, account_id=None):
+        """获取客户端实例，如果不存在则创建"""
+        if not account_id:
+            # 如果没有指定account_id，使用活跃账号
+            account = Account.get_active()
+            if account:
+                account_id = account['id']
+            else:
+                return None
+        
+        # 如果client已存在且已连接，直接返回
+        if account_id in self.clients:
+            client = self.clients[account_id]
+            if client.is_connected():
+                return client
+        
+        # 否则，从session文件重新创建client
+        account = Account.get_by_id(account_id)
+        if not account or not account['session_file']:
+            return None
+        
+        session_path = account['session_file'].replace('.session', '')
+        if not os.path.exists(account['session_file']):
+            return None
+        
+        # 创建新的client实例
+        client = TelegramClient(
+            session_path,
+            account['api_id'],
+            account['api_hash']
+        )
+        
+        # 连接
+        await client.connect()
+        
+        # 检查是否已授权
+        if not await client.is_user_authorized():
+            await client.disconnect()
+            return None
+        
+        # 保存client
+        self.clients[account_id] = client
+        self.session_names[account_id] = session_path
+        
+        return client
     
     async def search_bot_messages(self, bot_username, keyword=None, limit=100, account_id=None):
         """搜索机器人消息"""
         try:
-            client = self.get_client(account_id)
+            client = await self.get_client(account_id)
             if not client:
                 raise Exception("客户端未初始化")
             
@@ -222,7 +259,7 @@ class TelegramService:
     async def send_message_to_bot(self, bot_username, message, account_id=None):
         """向机器人发送消息"""
         try:
-            client = self.get_client(account_id)
+            client = await self.get_client(account_id)
             if not client:
                 raise Exception("客户端未初始化")
             
@@ -263,7 +300,7 @@ class TelegramService:
     async def join_group(self, link, account_id=None):
         """加入群组/频道"""
         try:
-            client = self.get_client(account_id)
+            client = await self.get_client(account_id)
             if not client:
                 raise Exception("客户端未初始化")
             
@@ -300,7 +337,7 @@ class TelegramService:
     async def get_history(self, group_id, limit=1000, account_id=None):
         """获取群组历史消息"""
         try:
-            client = self.get_client(account_id)
+            client = await self.get_client(account_id)
             if not client:
                 raise Exception("客户端未初始化")
             
@@ -346,7 +383,7 @@ class TelegramService:
     async def start_listener(self, group_id, callback, account_id=None):
         """启动实时监听"""
         try:
-            client = self.get_client(account_id)
+            client = await self.get_client(account_id)
             if not client:
                 raise Exception("客户端未初始化")
             
@@ -396,14 +433,14 @@ class TelegramService:
         """停止监听"""
         if account_id and account_id in self.listeners:
             if group_id in self.listeners[account_id]:
-                client = self.get_client(account_id)
+                client = await self.get_client(account_id)
                 if client:
                     client.remove_event_handler(self.listeners[account_id][group_id])
                 del self.listeners[account_id][group_id]
     
     async def run_until_disconnected(self, account_id=None):
         """保持客户端运行"""
-        client = self.get_client(account_id)
+        client = await self.get_client(account_id)
         if client:
             await client.run_until_disconnected()
 

@@ -4,6 +4,7 @@ from database.init_db import init_database
 from routes.auth import auth_bp
 from routes.tasks import tasks_bp
 from routes.data import data_bp
+from routes.batch import batch_bp
 import logging
 import os
 
@@ -27,6 +28,7 @@ def create_app(config_name='default'):
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(data_bp)
+    app.register_blueprint(batch_bp)
     
     # 注册路由
     @app.route('/')
@@ -44,6 +46,10 @@ def create_app(config_name='default'):
     @app.route('/data')
     def data():
         return render_template('data.html')
+    
+    @app.route('/batch')
+    def batch():
+        return render_template('batch.html')
     
     return app
 

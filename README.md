@@ -487,9 +487,9 @@ cp .env.example .env
 
 ## 📮 联系方式
 
-- 项目主页: [https://github.com/omniores3/pythonGroupTools](https://github.com/omniores3/pythonGroupTools)
-- 问题反馈: [Issues](https://github.com/omniores3/pythonGroupTools/issues)
-- Telegram:@easSearchs
+- 项目主页: [https://github.com/your-username/telegram-collector](https://github.com/your-username/telegram-collector)
+- 问题反馈: [Issues](https://github.com/your-username/telegram-collector/issues)
+- 邮箱: your-email@example.com
 
 ---
 
@@ -505,6 +505,6 @@ cp .env.example .env
 
 **[⬆ 回到顶部](#telegram-群组频道采集系统)**
 
-Made with ❤️ by [@easSearchs](https://t.me/easSearchs)
+Made with ❤️ by [Your Name](https://github.com/your-username)
 
 </div>
