@@ -111,16 +111,57 @@
                     <table class="table table-sm table-hover">
                         <thead>
                             <tr>
-                                <th>序号</th>
-                                <th>数据</th>
-                                <th>状态</th>
-                                <th>HTTP状态码</th>
-                                <th>错误信息</th>
+                                <th style="width: 60px;">序号</th>
+                                <th style="width: 250px;">数据</th>
+                                <th style="width: 80px;">状态</th>
+                                <th style="width: 100px;">HTTP状态码</th>
+                                <th>接口响应</th>
+                                <th style="width: 80px;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="resultList"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 响应详情模态框 -->
+<div class="modal fade" id="responseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-text"></i> 接口响应详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>请求数据:</strong></label>
+                    <div class="alert alert-info" id="modalRequestData"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>HTTP状态码:</strong></label>
+                    <div class="alert alert-secondary" id="modalStatusCode"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>响应内容:</strong></label>
+                    <div class="card">
+                        <div class="card-body">
+                            <pre id="modalResponse" style="max-height: 400px; overflow-y: auto; margin: 0;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="copyResponse()">
+                    <i class="bi bi-clipboard"></i> 复制响应
+                </button>
             </div>
         </div>
     </div>

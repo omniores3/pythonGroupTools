@@ -108,8 +108,8 @@ Telegram 群组/频道采集系统是一个功能强大的 Web 应用，帮助�
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/omniores3/pythonGroupTools.git
-cd pythonGroupTools
+git clone https://github.com/your-username/telegram-collector.git
+cd telegram-collector
 ```
 
 ### 2. 安装依赖

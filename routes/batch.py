@@ -55,14 +55,20 @@ def batch_submit():
                     'index': index,
                     'data': line,
                     'status_code': response.status_code,
-                    'success': 200 <= response.status_code < 300
+                    'success': 200 <= response.status_code < 300,
+                    'response': response.text[:500]  # 保存响应内容（限制长度）
                 }
+                
+                # 尝试解析JSON响应
+                try:
+                    result['response_json'] = response.json()
+                except:
+                    result['response_json'] = None
                 
                 if result['success']:
                     success_count += 1
                 else:
                     fail_count += 1
-                    result['error'] = response.text[:200]  # 限制错误信息长度
                 
                 results.append(result)
                 
@@ -75,7 +81,9 @@ def batch_submit():
                     'index': index,
                     'data': line,
                     'success': False,
-                    'error': str(e)
+                    'status_code': None,
+                    'response': str(e),
+                    'response_json': None
                 })
         
         return jsonify({

@@ -99,24 +99,37 @@ function displayResults(data) {
     const tbody = $('#resultList');
     tbody.empty();
     
-    data.results.forEach(result => {
+    data.results.forEach((result, idx) => {
         const statusBadge = result.success 
             ? '<span class="badge bg-success">成功</span>'
             : '<span class="badge bg-danger">失败</span>';
         
         const statusCode = result.status_code || '-';
-        const error = result.error || '-';
+        
+        // 格式化响应内容（显示简短版本）
+        let responsePreview = result.response || '-';
+        if (responsePreview.length > 50) {
+            responsePreview = responsePreview.substring(0, 50) + '...';
+        }
+        
+        // 转义HTML
+        responsePreview = $('<div>').text(responsePreview).html();
         
         const row = `
             <tr class="${result.success ? '' : 'table-danger'}">
                 <td>${result.index}</td>
-                <td class="text-truncate" style="max-width: 300px;" title="${result.data}">
-                    ${result.data}
+                <td class="text-truncate" style="max-width: 250px;" title="${escapeHtml(result.data)}">
+                    ${escapeHtml(result.data)}
                 </td>
                 <td>${statusBadge}</td>
                 <td>${statusCode}</td>
-                <td class="text-truncate" style="max-width: 200px;" title="${error}">
-                    ${error}
+                <td class="text-truncate" style="max-width: 300px;" title="${escapeHtml(result.response || '')}">
+                    ${responsePreview}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewResponse(${idx})">
+                        <i class="bi bi-eye"></i> 查看
+                    </button>
                 </td>
             </tr>
         `;
@@ -130,6 +143,66 @@ function displayResults(data) {
     $('html, body').animate({
         scrollTop: $('#resultCard').offset().top - 100
     }, 500);
+}
+
+// 查看响应详情
+function viewResponse(index) {
+    const result = batchResults[index];
+    
+    // 填充模态框内容
+    $('#modalRequestData').text(result.data);
+    $('#modalStatusCode').text(result.status_code || '无');
+    
+    // 格式化响应内容
+    let responseText = result.response || '无响应';
+    
+    // 如果有JSON格式的响应，美化显示
+    if (result.response_json) {
+        try {
+            responseText = JSON.stringify(result.response_json, null, 2);
+        } catch (e) {
+            // 使用原始响应
+        }
+    }
+    
+    $('#modalResponse').text(responseText);
+    
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('responseModal'));
+    modal.show();
+}
+
+// 复制响应内容
+function copyResponse() {
+    const responseText = $('#modalResponse').text();
+    
+    // 创建临时文本框
+    const textarea = document.createElement('textarea');
+    textarea.value = responseText;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    
+    // 选择并复制
+    textarea.select();
+    document.execCommand('copy');
+    
+    // 移除临时文本框
+    document.body.removeChild(textarea);
+    
+    showToast('响应内容已复制', 'success');
+}
+
+// HTML转义函数
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 // 清空表单
@@ -151,14 +224,14 @@ function exportResults() {
     }
     
     // 生成CSV内容
-    let csv = '序号,数据,状态,HTTP状态码,错误信息\n';
+    let csv = '序号,数据,状态,HTTP状态码,接口响应\n';
     
     batchResults.forEach(result => {
         const status = result.success ? '成功' : '失败';
         const statusCode = result.status_code || '';
-        const error = (result.error || '').replace(/"/g, '""'); // 转义引号
+        const response = (result.response || '').replace(/"/g, '""').replace(/\n/g, ' '); // 转义引号和换行
         
-        csv += `${result.index},"${result.data}","${status}","${statusCode}","${error}"\n`;
+        csv += `${result.index},"${result.data}","${status}","${statusCode}","${response}"\n`;
     });
     
     // 创建下载链接
