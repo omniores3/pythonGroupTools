@@ -497,7 +497,7 @@ cp .env.example .env
 
 如果这个项目对你有帮助，请给它一个 Star ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=your-username/telegram-collector&type=Date)](https://star-history.com/#your-username/telegram-collector&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=omniores3/pythonGroupTools&type=Date)](https://star-history.com/#omniores3/pythonGroupTools&Date)
 
 ---
 
