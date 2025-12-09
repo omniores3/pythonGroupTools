@@ -60,10 +60,13 @@
             </div>
         </div>
         
-        <!-- 提交进度 -->
+        <!-- 提交进度和实时日志 -->
         <div class="card mt-4" id="progressCard" style="display: none;">
-            <div class="card-header">
-                <i class="bi bi-hourglass-split"></i> 提交进度
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-hourglass-split"></i> 提交进度</span>
+                <button class="btn btn-sm btn-outline-danger" id="stopBtn" onclick="stopSubmit()" style="display: none;">
+                    <i class="bi bi-stop-circle"></i> 停止提交
+                </button>
             </div>
             <div class="card-body">
                 <div class="progress mb-3" style="height: 30px;">
@@ -72,8 +75,21 @@
                         0%
                     </div>
                 </div>
-                <div class="text-center">
+                <div class="text-center mb-3">
                     <span id="progressText">准备提交...</span>
+                </div>
+                
+                <!-- 实时日志 -->
+                <div class="card bg-dark text-light">
+                    <div class="card-header">
+                        <i class="bi bi-terminal"></i> 实时日志
+                        <button class="btn btn-sm btn-outline-light float-end" onclick="clearLogs()">
+                            <i class="bi bi-trash"></i> 清空
+                        </button>
+                    </div>
+                    <div class="card-body" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;" id="logContainer">
+                        <div id="logContent"></div>
+                    </div>
                 </div>
             </div>
         </div>

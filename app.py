@@ -68,10 +68,23 @@ def setup_logging():
 
 if __name__ == '__main__':
     app = create_app()
+    
+    # 打印启动信息
     print(f"""
     ╔══════════════════════════════════════════════════════════╗
     ║   Telegram群组/频道采集系统                               ║
     ║   访问地址: http://{Config.HOST}:{Config.PORT}                    ║
     ╚══════════════════════════════════════════════════════════╝
     """)
+    
+    # 自动打开浏览器（仅在非调试模式下）
+    if not Config.DEBUG:
+        import webbrowser
+        import threading
+        def open_browser():
+            import time
+            time.sleep(1.5)  # 等待服务器启动
+            webbrowser.open(f'http://localhost:{Config.PORT}')
+        threading.Thread(target=open_browser, daemon=True).start()
+    
     app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)

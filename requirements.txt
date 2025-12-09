@@ -3,3 +3,6 @@ Telethon==1.34.0
 requests==2.31.0
 python-dotenv==1.0.0
 Werkzeug==3.0.1
+
+# 打包工具（可选，仅打包时需要）
+PyInstaller==6.3.0

@@ -1,4 +1,7 @@
 let batchResults = [];
+let eventSource = null;
+let totalCount = 0;
+let processedCount = 0;
 
 $(document).ready(function() {
     // 实时统计行数
@@ -39,51 +42,227 @@ function submitBatch() {
         return;
     }
     
-    // 显示进度
+    // 重置状态
+    batchResults = [];
+    processedCount = 0;
+    
+    // 显示进度卡片
     $('#progressCard').show();
     $('#resultCard').hide();
     $('#progressBar').css('width', '0%').text('0%');
-    $('#progressText').text('正在提交...');
+    $('#progressText').text('准备提交...');
+    $('#logContent').empty();
+    $('#stopBtn').show();
     
     // 禁用表单
     $('#batchForm button[type="submit"]').prop('disabled', true);
     
-    // 发送请求
-    $.ajax({
-        url: '/api/batch/submit',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            api_url: apiUrl,
-            method: method,
-            param_name: paramName,
-            content: content
-        }),
-        success: function(response) {
-            if (response.code === 200) {
-                // 更新进度
-                $('#progressBar').css('width', '100%').text('100%');
-                $('#progressText').text('提交完成！');
-                
-                // 显示结果
-                setTimeout(function() {
-                    displayResults(response.data);
-                    showToast(response.message, 'success');
-                }, 500);
-            } else {
-                showToast(response.message || '提交失败', 'error');
-            }
-        },
-        error: function(xhr) {
-            const response = xhr.responseJSON;
-            showToast(response?.message || '提交失败', 'error');
-            $('#progressCard').hide();
-        },
-        complete: function() {
-            // 启用表单
-            $('#batchForm button[type="submit"]').prop('disabled', false);
-        }
+    // 构建请求参数
+    const params = new URLSearchParams({
+        api_url: apiUrl,
+        method: method,
+        param_name: paramName,
+        content: content
     });
+    
+    // 使用EventSource接收SSE
+    eventSource = new EventSource('/api/batch/submit?' + params.toString());
+    
+    eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        handleSSEMessage(data);
+    };
+    
+    eventSource.onerror = function(error) {
+        console.error('SSE Error:', error);
+        eventSource.close();
+        eventSource = null;
+        $('#stopBtn').hide();
+        $('#batchForm button[type="submit"]').prop('disabled', false);
+        showToast('连接中断，请重试', 'error');
+    };
+}
+
+// 处理SSE消息
+function handleSSEMessage(data) {
+    switch(data.type) {
+        case 'start':
+            totalCount = data.total;
+            addLog(`开始提交 ${totalCount} 条数据...`, 'info');
+            break;
+            
+        case 'processing':
+            addLog(`[${data.index}/${totalCount}] 正在处理: ${data.data}`, 'processing');
+            break;
+            
+        case 'result':
+            processedCount++;
+            batchResults.push(data);
+            
+            // 更新进度
+            const progress = Math.round((processedCount / totalCount) * 100);
+            $('#progressBar').css('width', progress + '%').text(progress + '%');
+            $('#progressText').text(`已处理 ${processedCount}/${totalCount} 条`);
+            
+            // 添加日志
+            if (data.success) {
+                addLog(`[${data.index}] ✓ 成功 (${data.elapsed_time}s) - HTTP ${data.status_code}`, 'success');
+                addLog(`请求数据: ${data.data}`, 'request');
+                
+                // 显示响应内容
+                if (data.response_json) {
+                    // JSON格式美化显示
+                    addLog(`API响应:`, 'response-header');
+                    addLogJSON(data.response_json, 'response');
+                } else if (data.response) {
+                    // 普通文本响应
+                    addLog(`API响应: ${data.response}`, 'response');
+                }
+            } else {
+                addLog(`[${data.index}] ✗ 失败 (${data.status_code || 'N/A'})`, 'error');
+                addLog(`请求数据: ${data.data}`, 'request');
+                
+                // 显示错误响应
+                if (data.response_json) {
+                    addLog(`错误响应:`, 'error-header');
+                    addLogJSON(data.response_json, 'error-response');
+                } else if (data.response) {
+                    addLog(`错误信息: ${data.response}`, 'error-response');
+                }
+            }
+            addLog('', 'separator'); // 添加空行分隔
+            break;
+            
+        case 'complete':
+            // 关闭连接
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            
+            // 更新UI
+            $('#progressBar').css('width', '100%').text('100%');
+            $('#progressText').text('提交完成！');
+            $('#stopBtn').hide();
+            $('#batchForm button[type="submit"]').prop('disabled', false);
+            
+            // 添加完成日志
+            addLog(`\n提交完成！成功: ${data.success} 条，失败: ${data.fail} 条`, 'complete');
+            
+            // 显示结果
+            setTimeout(function() {
+                displayResults({
+                    total: totalCount,
+                    success: data.success,
+                    fail: data.fail,
+                    results: batchResults
+                });
+                showToast(`提交完成：成功 ${data.success} 条，失败 ${data.fail} 条`, 'success');
+            }, 500);
+            break;
+    }
+}
+
+// 添加日志
+function addLog(message, type = 'info') {
+    if (type === 'separator') {
+        $('#logContent').append('<div style="height: 8px;"></div>');
+        return;
+    }
+    
+    const timestamp = new Date().toLocaleTimeString();
+    let colorClass = 'text-light';
+    let icon = '';
+    let showTimestamp = true;
+    let indent = '';
+    
+    switch(type) {
+        case 'info':
+            colorClass = 'text-info';
+            icon = 'ℹ';
+            break;
+        case 'processing':
+            colorClass = 'text-warning';
+            icon = '⟳';
+            break;
+        case 'success':
+            colorClass = 'text-success fw-bold';
+            icon = '✓';
+            break;
+        case 'error':
+            colorClass = 'text-danger fw-bold';
+            icon = '✗';
+            break;
+        case 'request':
+            colorClass = 'text-info';
+            icon = '📤';
+            showTimestamp = false;
+            indent = '  ';
+            break;
+        case 'response-header':
+            colorClass = 'text-success';
+            icon = '📥';
+            showTimestamp = false;
+            indent = '  ';
+            break;
+        case 'response':
+            colorClass = 'text-success';
+            icon = '';
+            showTimestamp = false;
+            indent = '    ';
+            break;
+        case 'error-header':
+            colorClass = 'text-danger';
+            icon = '📥';
+            showTimestamp = false;
+            indent = '  ';
+            break;
+        case 'error-response':
+            colorClass = 'text-danger';
+            icon = '';
+            showTimestamp = false;
+            indent = '    ';
+            break;
+        case 'complete':
+            colorClass = 'text-success fw-bold';
+            icon = '✓';
+            break;
+    }
+    
+    const timePrefix = showTimestamp ? `[${timestamp}] ` : '';
+    const logLine = `<div class="${colorClass}">${indent}${timePrefix}${icon} ${escapeHtml(message)}</div>`;
+    $('#logContent').append(logLine);
+    
+    // 自动滚动到底部
+    const logContainer = $('#logContainer')[0];
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// 添加JSON格式的日志
+function addLogJSON(jsonObj, type = 'response') {
+    const jsonStr = JSON.stringify(jsonObj, null, 2);
+    const lines = jsonStr.split('\n');
+    
+    lines.forEach(line => {
+        addLog(line, type);
+    });
+}
+
+// 清空日志
+function clearLogs() {
+    $('#logContent').empty();
+}
+
+// 停止提交
+function stopSubmit() {
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+        addLog('用户手动停止提交', 'error');
+        $('#stopBtn').hide();
+        $('#batchForm button[type="submit"]').prop('disabled', false);
+        showToast('已停止提交', 'warning');
+    }
 }
 
 // 显示结果
