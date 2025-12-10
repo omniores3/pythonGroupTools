@@ -57,10 +57,19 @@ class TaskService:
     
     def stop_task(self, task_id):
         """停止任务"""
-        if task_id not in self.running_tasks:
+        task = Task.get_by_id(task_id)
+        if not task:
+            return {'status': 'error', 'message': '任务不存在'}
+        
+        # 检查任务状态
+        if task['status'] != 'running':
             return {'status': 'error', 'message': '任务未在运行'}
         
-        self.running_tasks[task_id] = False
+        # 标记任务停止
+        if task_id in self.running_tasks:
+            self.running_tasks[task_id] = False
+        
+        # 更新数据库状态
         Task.update(task_id, status='stopped')
         
         return {'status': 'success', 'message': '任务已停止'}
@@ -143,22 +152,16 @@ class TaskService:
                     print(f"[任务{task_id}] 搜索关键词: {keyword}")
                     
                     # 1. 发送关键词给机器人
-                    await telegram_service.send_message_to_bot(
+                    response_message = await telegram_service.send_message_to_bot(
                         task['bot_username'], 
                         keyword,
                         account_id=account_id
                     )
-                    await asyncio.sleep(2)  # 等待机器人响应
                     
-                    # 2. 获取机器人返回的消息
-                    messages = await telegram_service.search_bot_messages(
-                        task['bot_username'],
-                        limit=50,
-                        account_id=account_id
-                    )
-                    
-                    # 3. 提取群组链接
-                    links = telegram_service.extract_group_links(messages)
+                    # 2. 提取群组链接
+                    links = []
+                    if response_message and response_message.text:
+                        links = telegram_service.extract_group_links([{'text': response_message.text}])
                     print(f"[任务{task_id}] 关键词 '{keyword}' 找到 {len(links)} 个链接")
                     
                     # 4. 处理翻页（如果配置了）
@@ -322,34 +325,48 @@ class TaskService:
             Task.update(task_id, status='failed')
     
     async def _process_pagination(self, task, account_id):
-        """处理翻页"""
+        """处理翻页 - 点击下一页按钮"""
         links = []
         pagination_config = task['pagination_config']
         max_pages = pagination_config.get('max_pages', Config.MAX_PAGINATION_PAGES)
         next_button_text = pagination_config.get('next_button_text', '下一页')
         
+        # 支持多个下一页按钮文字，用逗号分隔
+        next_button_texts = [text.strip() for text in next_button_text.split(',') if text.strip()]
+        
         for page in range(max_pages):
-            try:
-                # 发送翻页命令
-                response = await telegram_service.send_message_to_bot(
-                    task['bot_username'],
-                    next_button_text,
-                    account_id=account_id
-                )
-                
-                if response:
-                    # 提取链接
-                    page_links = telegram_service.extract_group_links([{'text': response}])
-                    links.extend(page_links)
+            success = False
+            
+            # 尝试每个下一页按钮文字
+            for button_text in next_button_texts:
+                try:
+                    print(f"尝试点击按钮: {button_text}")
+                    # 点击下一页按钮
+                    response_message = await telegram_service.click_bot_button(
+                        task['bot_username'],
+                        button_text,
+                        account_id=account_id
+                    )
                     
-                    # 等待一下避免频率限制
-                    await asyncio.sleep(2)
-                else:
-                    break
-                    
-            except Exception as e:
-                print(f"翻页失败: {str(e)}")
+                    if response_message and response_message.text:
+                        # 提取链接
+                        page_links = telegram_service.extract_group_links([{'text': response_message.text}])
+                        if page_links:
+                            links.extend(page_links)
+                            success = True
+                            print(f"翻页成功，使用按钮: {button_text}，找到 {len(page_links)} 个链接")
+                            break
+                        
+                except Exception as e:
+                    print(f"点击按钮失败 (按钮: {button_text}): {str(e)}")
+                    continue
+            
+            if not success:
+                print("所有翻页按钮都失败，停止翻页")
                 break
+            
+            # 等待一下避免频率限制
+            await asyncio.sleep(2)
         
         return links
     

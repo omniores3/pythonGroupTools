@@ -185,7 +185,7 @@ class TelegramService:
                 del self._loops[account_id]
     
     async def get_client(self, account_id=None):
-        """获取客户端实例，如果不存在则创建"""
+        """获取客户端实例，如果不存在则创建（线程安全）"""
         if not account_id:
             # 如果没有指定account_id，使用活跃账号
             account = Account.get_active()
@@ -194,24 +194,46 @@ class TelegramService:
             else:
                 return None
         
+        # 获取当前线程ID
+        import threading
+        import shutil
+        thread_id = threading.current_thread().ident
+        client_key = f"{account_id}_{thread_id}"
+        
         # 如果client已存在且已连接，直接返回
-        if account_id in self.clients:
-            client = self.clients[account_id]
-            if client.is_connected():
-                return client
+        if client_key in self.clients:
+            client = self.clients[client_key]
+            try:
+                if client.is_connected():
+                    return client
+            except:
+                pass
         
         # 否则，从session文件重新创建client
         account = Account.get_by_id(account_id)
         if not account or not account['session_file']:
             return None
         
-        session_path = account['session_file'].replace('.session', '')
+        original_session = account['session_file'].replace('.session', '')
         if not os.path.exists(account['session_file']):
             return None
         
-        # 创建新的client实例
+        # 为当前线程创建独立的session文件副本
+        thread_session = f"{original_session}_thread_{thread_id}"
+        thread_session_file = f"{thread_session}.session"
+        
+        # 如果线程session文件不存在，复制原始session
+        if not os.path.exists(thread_session_file):
+            try:
+                shutil.copy2(account['session_file'], thread_session_file)
+            except Exception as e:
+                print(f"复制session文件失败: {e}")
+                # 如果复制失败，直接使用原始session
+                thread_session = original_session
+        
+        # 为当前线程创建新的client实例
         client = TelegramClient(
-            session_path,
+            thread_session,
             account['api_id'],
             account['api_hash']
         )
@@ -224,9 +246,9 @@ class TelegramService:
             await client.disconnect()
             return None
         
-        # 保存client
-        self.clients[account_id] = client
-        self.session_names[account_id] = session_path
+        # 保存client（使用线程ID作为key）
+        self.clients[client_key] = client
+        self.session_names[client_key] = thread_session
         
         return client
     
@@ -259,9 +281,14 @@ class TelegramService:
     async def send_message_to_bot(self, bot_username, message, account_id=None):
         """向机器人发送消息"""
         try:
+            # 确保在正确的 event loop 中运行
             client = await self.get_client(account_id)
             if not client:
                 raise Exception("客户端未初始化")
+            
+            # 确保客户端连接正常
+            if not client.is_connected():
+                await client.connect()
             
             bot = await client.get_entity(bot_username)
             await client.send_message(bot, message)
@@ -272,11 +299,57 @@ class TelegramService:
             # 获取最新消息
             messages = await client.get_messages(bot, limit=1)
             if messages:
-                return messages[0].text
+                return messages[0]
             return None
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             raise Exception(f"发送消息失败: {str(e)}")
+    
+    async def click_bot_button(self, bot_username, button_text, account_id=None):
+        """点击机器人的按钮"""
+        try:
+            client = await self.get_client(account_id)
+            if not client:
+                raise Exception("客户端未初始化")
+            
+            if not client.is_connected():
+                await client.connect()
+            
+            bot = await client.get_entity(bot_username)
+            
+            # 获取最新的消息（包含按钮）
+            messages = await client.get_messages(bot, limit=1)
+            if not messages:
+                raise Exception("没有找到机器人消息")
+            
+            message = messages[0]
+            
+            # 检查消息是否有按钮
+            if not message.buttons:
+                raise Exception("消息没有按钮")
+            
+            # 查找匹配的按钮
+            for row in message.buttons:
+                for button in row:
+                    if button.text == button_text:
+                        # 点击按钮
+                        await button.click()
+                        # 等待响应
+                        await asyncio.sleep(2)
+                        # 获取新消息
+                        new_messages = await client.get_messages(bot, limit=1)
+                        if new_messages:
+                            return new_messages[0]
+                        return None
+            
+            raise Exception(f"没有找到按钮: {button_text}")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise Exception(f"点击按钮失败: {str(e)}")
     
     def extract_group_links(self, messages):
         """从消息中提取群组/频道链接"""

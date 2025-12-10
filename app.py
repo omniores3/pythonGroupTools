@@ -7,13 +7,18 @@ from routes.data import data_bp
 from routes.batch import batch_bp
 import logging
 import os
+import sys
 
 def create_app(config_name='default'):
-    """创建Flask应用"""
+    """创建Flask应用 - 纯API模式"""
     app = Flask(__name__)
     
     # 加载配置
     app.config.from_object(config[config_name])
+    
+    # 启用CORS支持Vue前端
+    from flask_cors import CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
     # 初始化配置
     Config.init_app()
@@ -24,32 +29,20 @@ def create_app(config_name='default'):
     # 配置日志
     setup_logging()
     
-    # 注册蓝图
+    # 注册API蓝图
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(batch_bp)
     
-    # 注册路由
+    # 健康检查接口
     @app.route('/')
     def index():
-        return render_template('index.html')
+        return {'status': 'ok', 'message': 'Telegram Collector API Server'}
     
-    @app.route('/auth')
-    def auth():
-        return render_template('auth.html')
-    
-    @app.route('/tasks')
-    def tasks():
-        return render_template('tasks.html')
-    
-    @app.route('/data')
-    def data():
-        return render_template('data.html')
-    
-    @app.route('/batch')
-    def batch():
-        return render_template('batch.html')
+    @app.route('/health')
+    def health():
+        return {'status': 'healthy', 'version': '1.0.0'}
     
     return app
 
@@ -67,6 +60,11 @@ def setup_logging():
     )
 
 if __name__ == '__main__':
+    # 强制重新加载，避免缓存问题
+    import sys
+    if 'app' in sys.modules:
+        del sys.modules['app']
+    
     app = create_app()
     
     # 打印启动信息
@@ -87,4 +85,4 @@ if __name__ == '__main__':
             webbrowser.open(f'http://localhost:{Config.PORT}')
         threading.Thread(target=open_browser, daemon=True).start()
     
-    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
+    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG, use_reloader=False)

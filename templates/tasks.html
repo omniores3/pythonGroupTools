@@ -134,7 +134,12 @@
                     <!-- 过滤配置 -->
                     <h6 class="mb-3 mt-4">过滤配置（可选）</h6>
                     <div class="mb-3" id="groupRegexGroup">
-                        <label class="form-label">群组/频道名称正则表达式</label>
+                        <label class="form-label">
+                            群组/频道名称正则表达式
+                            <button type="button" class="btn btn-sm btn-outline-info ms-2" onclick="showRegexExamples('group')">
+                                <i class="bi bi-lightbulb"></i> 查看示例
+                            </button>
+                        </label>
                         <input type="text" class="form-control" id="groupRegex" placeholder="例如: .*crypto.*">
                         <small class="text-muted">
                             <strong>示例：</strong><br>
@@ -145,7 +150,12 @@
                     </div>
                     
                     <div class="mb-3" id="messageRegexGroup" style="display: none;">
-                        <label class="form-label">消息内容正则表达式</label>
+                        <label class="form-label">
+                            消息内容正则表达式
+                            <button type="button" class="btn btn-sm btn-outline-info ms-2" onclick="showRegexExamples('message')">
+                                <i class="bi bi-lightbulb"></i> 查看示例
+                            </button>
+                        </label>
                         <input type="text" class="form-control" id="messageRegex" placeholder="例如: .*bitcoin.*">
                         <small class="text-muted">
                             <strong>示例：</strong><br>
@@ -246,6 +256,27 @@
             </div>
             <div class="modal-body" id="taskDetailContent">
                 <!-- 动态加载 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 正则表达式示例库模态框 -->
+<div class="modal fade" id="regexExamplesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-lightbulb-fill"></i> 正则表达式示例库</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> <strong>提示：</strong>点击任意示例即可复制到输入框
+                </div>
+                
+                <div id="regexExamplesContent">
+                    <!-- 动态加载 -->
+                </div>
             </div>
         </div>
     </div>

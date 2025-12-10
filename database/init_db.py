@@ -96,7 +96,7 @@ def init_database():
     Database.execute('CREATE INDEX IF NOT EXISTS idx_messages_date ON messages(message_date)')
     Database.execute('CREATE INDEX IF NOT EXISTS idx_api_logs_task_id ON api_logs(task_id)')
     
-    print("✅ 数据库初始化完成")
+    print("[OK] 数据库初始化完成")
 
 if __name__ == '__main__':
     init_database()

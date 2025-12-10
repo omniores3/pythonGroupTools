@@ -388,34 +388,79 @@ function editTask(taskId) {
             $('#taskModalTitle').text('编辑任务');
             $('#taskId').val(task.id);
             $('#taskName').val(task.name);
-            $('#botUsername').val(task.bot_username);
-            $('#groupRegex').val(task.group_regex || '');
-            $('#messageRegex').val(task.message_regex || '');
             
-            // 采集配置
-            $('#collectMode').val(task.collect_mode || 'both');
-            $('#historyLimit').val(task.history_limit || 1000);
+            // 加载账号列表并设置当前账号
+            loadAvailableAccounts();
+            setTimeout(() => {
+                $('#accountId').val(task.account_id);
+            }, 500);
             
-            // 根据模式显示/隐藏历史消息数量
-            if (task.collect_mode === 'realtime_only') {
-                $('#historyLimitGroup').hide();
+            // 设置任务类型
+            $('#taskType').val(task.task_type || 'bot_search').trigger('change');
+            
+            // 根据任务类型设置不同的字段
+            if (task.task_type === 'bot_search') {
+                $('#botUsername').val(task.bot_username || '');
+                $('#groupRegex').val(task.group_regex || '');
+                
+                // 处理搜索关键词（JSON数组转换为多行文本）
+                if (task.search_keywords) {
+                    try {
+                        const keywords = typeof task.search_keywords === 'string' 
+                            ? JSON.parse(task.search_keywords) 
+                            : task.search_keywords;
+                        $('#searchKeywords').val(Array.isArray(keywords) ? keywords.join('\n') : '');
+                    } catch (e) {
+                        $('#searchKeywords').val('');
+                    }
+                }
+                
+                // 翻页配置
+                if (task.pagination_config) {
+                    $('#nextButtonText').val(task.pagination_config.next_button_text || '');
+                    $('#maxPages').val(task.pagination_config.max_pages || 10);
+                }
             } else {
-                $('#historyLimitGroup').show();
+                // 直接采集模式
+                $('#messageRegex').val(task.message_regex || '');
+                $('#collectMode').val(task.collect_mode || 'both');
+                $('#historyLimit').val(task.history_limit || 1000);
+                
+                // 处理目标群组（JSON数组转换为多行文本）
+                if (task.target_groups) {
+                    try {
+                        const groups = typeof task.target_groups === 'string' 
+                            ? JSON.parse(task.target_groups) 
+                            : task.target_groups;
+                        $('#targetGroups').val(Array.isArray(groups) ? groups.join('\n') : '');
+                    } catch (e) {
+                        $('#targetGroups').val('');
+                    }
+                }
+                
+                // 根据模式显示/隐藏历史消息数量
+                if (task.collect_mode === 'realtime_only') {
+                    $('#historyLimitGroup').hide();
+                } else {
+                    $('#historyLimitGroup').show();
+                }
             }
-            
-            // 翻页配置
-            $('#nextButtonText').val(task.pagination_config?.next_button_text || '');
-            $('#maxPages').val(task.pagination_config?.max_pages || 10);
             
             // API配置
             if (task.api_config) {
                 $('#apiUrl').val(task.api_config.url || '');
                 $('#apiMethod').val(task.api_config.method || 'POST');
                 $('#apiParamMapping').val(JSON.stringify(task.api_config.param_mapping || {}, null, 2));
+            } else {
+                $('#apiUrl').val('');
+                $('#apiMethod').val('POST');
+                $('#apiParamMapping').val('');
             }
             
             $('#taskModal').modal('show');
         }
+    }).fail(function() {
+        showToast('加载任务失败', 'error');
     });
 }
 
@@ -455,4 +500,187 @@ function formatDate(dateStr) {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
     return date.toLocaleString('zh-CN');
+}
+
+
+// 正则表达式示例库数据
+const regexExamples = {
+    group: [
+        {
+            category: '加密货币相关',
+            bot: '@kuaisou03bot, @zh_secretary_bot',
+            examples: [
+                { name: '包含crypto或bitcoin', regex: '.*crypto.*|.*bitcoin.*|.*btc.*', desc: '匹配包含加密货币关键词的群组' },
+                { name: '包含交易、币圈', regex: '.*交易.*|.*币圈.*|.*炒币.*', desc: '匹配中文加密货币群组' },
+                { name: '以BTC/ETH开头', regex: '^(BTC|ETH|USDT).*', desc: '匹配以主流币种开头的群组' },
+                { name: '包含DeFi/NFT', regex: '.*DeFi.*|.*NFT.*|.*Web3.*', desc: '匹配区块链新兴领域' }
+            ]
+        },
+        {
+            category: '技术开发相关',
+            bot: '@hao1234bot, @zh_secretary_bot',
+            examples: [
+                { name: '编程语言', regex: '.*(Python|Java|JavaScript|Go|Rust).*', desc: '匹配编程语言相关群组' },
+                { name: '开发框架', regex: '.*(React|Vue|Django|Spring|Laravel).*', desc: '匹配开发框架群组' },
+                { name: '技术栈', regex: '.*开发.*|.*程序员.*|.*码农.*|.*技术.*', desc: '匹配中文技术群组' },
+                { name: 'AI/机器学习', regex: '.*AI.*|.*机器学习.*|.*深度学习.*|.*ChatGPT.*', desc: '匹配AI相关群组' }
+            ]
+        },
+        {
+            category: '电商/营销相关',
+            bot: '@sou07_bot, @hao1234bot',
+            examples: [
+                { name: '电商平台', regex: '.*(淘宝|京东|拼多多|亚马逊|速卖通).*', desc: '匹配电商平台群组' },
+                { name: '跨境电商', regex: '.*跨境.*|.*外贸.*|.*独立站.*|.*Shopify.*', desc: '匹配跨境电商群组' },
+                { name: '营销推广', regex: '.*营销.*|.*推广.*|.*引流.*|.*广告.*', desc: '匹配营销相关群组' },
+                { name: '社交电商', regex: '.*微商.*|.*社群.*|.*私域.*|.*团购.*', desc: '匹配社交电商群组' }
+            ]
+        },
+        {
+            category: '资源分享相关',
+            bot: '@hao1234bot, @zh_secretary_bot',
+            examples: [
+                { name: '影视资源', regex: '.*电影.*|.*剧集.*|.*影视.*|.*资源.*', desc: '匹配影视资源群组' },
+                { name: '学习资料', regex: '.*教程.*|.*课程.*|.*学习.*|.*资料.*', desc: '匹配学习资料群组' },
+                { name: '软件工具', regex: '.*软件.*|.*工具.*|.*破解.*|.*激活.*', desc: '匹配软件工具群组' },
+                { name: '电子书', regex: '.*电子书.*|.*PDF.*|.*书籍.*|.*阅读.*', desc: '匹配电子书群组' }
+            ]
+        },
+        {
+            category: '地区/语言相关',
+            bot: '@zh_secretary_bot, @sou07_bot',
+            examples: [
+                { name: '中文群组', regex: '.*[\u4e00-\u9fa5]+.*', desc: '匹配包含中文的群组' },
+                { name: '英文群组', regex: '^[a-zA-Z0-9\\s]+$', desc: '匹配纯英文群组' },
+                { name: '特定城市', regex: '.*(北京|上海|深圳|广州|杭州).*', desc: '匹配特定城市群组' },
+                { name: '国家/地区', regex: '.*(中国|美国|日本|韩国|新加坡).*', desc: '匹配特定国家群组' }
+            ]
+        },
+        {
+            category: '排除/过滤',
+            bot: '通用',
+            examples: [
+                { name: '排除测试群', regex: '^(?!.*(test|测试|Test)).*', desc: '排除包含test或测试的群组' },
+                { name: '排除广告群', regex: '^(?!.*(广告|AD|推广)).*', desc: '排除广告相关群组' },
+                { name: '排除私密群', regex: '^(?!.*(私密|内部|VIP)).*', desc: '排除私密群组' },
+                { name: '只要公开群', regex: '^(?!.*私有).*', desc: '只匹配公开群组' }
+            ]
+        }
+    ],
+    message: [
+        {
+            category: '价格/交易信息',
+            bot: '通用',
+            examples: [
+                { name: '包含价格', regex: '.*(价格|price|\\$\\d+|¥\\d+|€\\d+).*', desc: '匹配包含价格信息的消息' },
+                { name: '涨跌信息', regex: '.*(涨|跌|上涨|下跌|\\+\\d+%|\\-\\d+%).*', desc: '匹配涨跌信息' },
+                { name: '交易信号', regex: '.*(买入|卖出|做多|做空|开仓|平仓).*', desc: '匹配交易信号' },
+                { name: '数字范围', regex: '.*\\d{1,5}\\.\\d{2}.*', desc: '匹配包含小数的数字（如价格）' }
+            ]
+        },
+        {
+            category: '链接/资源',
+            bot: '通用',
+            examples: [
+                { name: '包含链接', regex: '.*https?://.*', desc: '匹配包含HTTP链接的消息' },
+                { name: 'Telegram链接', regex: '.*t\\.me/.*', desc: '匹配包含Telegram链接' },
+                { name: '包含邮箱', regex: '.*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}.*', desc: '匹配包含邮箱地址' },
+                { name: '包含手机号', regex: '.*1[3-9]\\d{9}.*', desc: '匹配包含中国手机号' }
+            ]
+        },
+        {
+            category: '关键词匹配',
+            bot: '通用',
+            examples: [
+                { name: '加密货币', regex: '.*(bitcoin|btc|ethereum|eth|crypto|币).*', desc: '匹配加密货币相关' },
+                { name: '技术开发', regex: '.*(代码|code|开发|develop|API|SDK).*', desc: '匹配技术开发相关' },
+                { name: '营销推广', regex: '.*(推广|营销|引流|获客|转化).*', desc: '匹配营销相关' },
+                { name: 'AI相关', regex: '.*(AI|人工智能|ChatGPT|GPT|机器学习).*', desc: '匹配AI相关内容' }
+            ]
+        },
+        {
+            category: '时间/日期',
+            bot: '通用',
+            examples: [
+                { name: '包含日期', regex: '.*\\d{4}-\\d{2}-\\d{2}.*', desc: '匹配包含日期格式（YYYY-MM-DD）' },
+                { name: '包含时间', regex: '.*\\d{1,2}:\\d{2}.*', desc: '匹配包含时间格式（HH:MM）' },
+                { name: '今天/明天', regex: '.*(今天|明天|昨天|today|tomorrow).*', desc: '匹配时间相关词' },
+                { name: '最近发布', regex: '.*(刚刚|刚才|最新|new|latest).*', desc: '匹配最新消息' }
+            ]
+        },
+        {
+            category: '内容类型',
+            bot: '通用',
+            examples: [
+                { name: '问题/提问', regex: '.*(\\?|？|如何|怎么|为什么|how|why|what).*', desc: '匹配提问类消息' },
+                { name: '通知/公告', regex: '.*(通知|公告|提醒|notice|announcement).*', desc: '匹配通知公告' },
+                { name: '教程/指南', regex: '.*(教程|指南|攻略|tutorial|guide|how to).*', desc: '匹配教程类内容' },
+                { name: '新闻/资讯', regex: '.*(新闻|资讯|消息|news|breaking).*', desc: '匹配新闻资讯' }
+            ]
+        },
+        {
+            category: '排除/过滤',
+            bot: '通用',
+            examples: [
+                { name: '排除广告', regex: '^(?!.*(广告|AD|推广|spam)).*', desc: '排除广告消息' },
+                { name: '排除短消息', regex: '.{10,}', desc: '只匹配10个字符以上的消息' },
+                { name: '排除表情', regex: '^(?!.*[😀-🙏]).*', desc: '排除只有表情的消息' },
+                { name: '只要中文', regex: '.*[\u4e00-\u9fa5]+.*', desc: '只匹配包含中文的消息' }
+            ]
+        }
+    ]
+};
+
+// 显示正则表达式示例
+function showRegexExamples(type) {
+    const examples = regexExamples[type];
+    const targetInput = type === 'group' ? '#groupRegex' : '#messageRegex';
+    const title = type === 'group' ? '群组名称' : '消息内容';
+    
+    let html = `<h5 class="mb-3">${title}正则表达式示例</h5>`;
+    
+    examples.forEach(category => {
+        html += `
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-folder"></i> ${category.category}
+                        <span class="badge bg-secondary ms-2">推荐机器人: ${category.bot}</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+        `;
+        
+        category.examples.forEach(example => {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="border rounded p-3 h-100 regex-example" style="cursor: pointer;" 
+                         onclick="applyRegex('${targetInput}', '${example.regex.replace(/'/g, "\\'")}')">
+                        <h6 class="text-primary">
+                            <i class="bi bi-code-square"></i> ${example.name}
+                        </h6>
+                        <code class="d-block mb-2 text-break">${example.regex}</code>
+                        <small class="text-muted">${example.desc}</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    $('#regexExamplesContent').html(html);
+    $('#regexExamplesModal').modal('show');
+}
+
+// 应用正则表达式到输入框
+function applyRegex(targetInput, regex) {
+    $(targetInput).val(regex);
+    $('#regexExamplesModal').modal('hide');
+    showToast('正则表达式已应用', 'success');
 }

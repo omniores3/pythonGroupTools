@@ -10,7 +10,7 @@ class Config:
     # Flask配置
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
-    DEBUG = FLASK_ENV == 'development'
+    DEBUG = False  # 暂时关闭调试模式解决模板加载问题
     
     # 数据库配置
     DATABASE_PATH = os.getenv('DATABASE_PATH', 'data/telegram_collector.db')
