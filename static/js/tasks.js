@@ -507,63 +507,17 @@ function formatDate(dateStr) {
 const regexExamples = {
     group: [
         {
-            category: '加密货币相关',
-            bot: '@kuaisou03bot, @zh_secretary_bot',
+            category: '推荐搜索机器人',
+            bot: '@soso, @hao1234bot, @zh_secretary_bot, @kuaisou03bot, @sou07_bot',
             examples: [
-                { name: '包含crypto或bitcoin', regex: '.*crypto.*|.*bitcoin.*|.*btc.*', desc: '匹配包含加密货币关键词的群组' },
-                { name: '包含交易、币圈', regex: '.*交易.*|.*币圈.*|.*炒币.*', desc: '匹配中文加密货币群组' },
-                { name: '以BTC/ETH开头', regex: '^(BTC|ETH|USDT).*', desc: '匹配以主流币种开头的群组' },
-                { name: '包含DeFi/NFT', regex: '.*DeFi.*|.*NFT.*|.*Web3.*', desc: '匹配区块链新兴领域' }
-            ]
-        },
-        {
-            category: '技术开发相关',
-            bot: '@hao1234bot, @zh_secretary_bot',
-            examples: [
-                { name: '编程语言', regex: '.*(Python|Java|JavaScript|Go|Rust).*', desc: '匹配编程语言相关群组' },
-                { name: '开发框架', regex: '.*(React|Vue|Django|Spring|Laravel).*', desc: '匹配开发框架群组' },
-                { name: '技术栈', regex: '.*开发.*|.*程序员.*|.*码农.*|.*技术.*', desc: '匹配中文技术群组' },
-                { name: 'AI/机器学习', regex: '.*AI.*|.*机器学习.*|.*深度学习.*|.*ChatGPT.*', desc: '匹配AI相关群组' }
-            ]
-        },
-        {
-            category: '电商/营销相关',
-            bot: '@sou07_bot, @hao1234bot',
-            examples: [
-                { name: '电商平台', regex: '.*(淘宝|京东|拼多多|亚马逊|速卖通).*', desc: '匹配电商平台群组' },
-                { name: '跨境电商', regex: '.*跨境.*|.*外贸.*|.*独立站.*|.*Shopify.*', desc: '匹配跨境电商群组' },
-                { name: '营销推广', regex: '.*营销.*|.*推广.*|.*引流.*|.*广告.*', desc: '匹配营销相关群组' },
-                { name: '社交电商', regex: '.*微商.*|.*社群.*|.*私域.*|.*团购.*', desc: '匹配社交电商群组' }
-            ]
-        },
-        {
-            category: '资源分享相关',
-            bot: '@hao1234bot, @zh_secretary_bot',
-            examples: [
-                { name: '影视资源', regex: '.*电影.*|.*剧集.*|.*影视.*|.*资源.*', desc: '匹配影视资源群组' },
-                { name: '学习资料', regex: '.*教程.*|.*课程.*|.*学习.*|.*资料.*', desc: '匹配学习资料群组' },
-                { name: '软件工具', regex: '.*软件.*|.*工具.*|.*破解.*|.*激活.*', desc: '匹配软件工具群组' },
-                { name: '电子书', regex: '.*电子书.*|.*PDF.*|.*书籍.*|.*阅读.*', desc: '匹配电子书群组' }
-            ]
-        },
-        {
-            category: '地区/语言相关',
-            bot: '@zh_secretary_bot, @sou07_bot',
-            examples: [
-                { name: '中文群组', regex: '.*[\u4e00-\u9fa5]+.*', desc: '匹配包含中文的群组' },
-                { name: '英文群组', regex: '^[a-zA-Z0-9\\s]+$', desc: '匹配纯英文群组' },
-                { name: '特定城市', regex: '.*(北京|上海|深圳|广州|杭州).*', desc: '匹配特定城市群组' },
-                { name: '国家/地区', regex: '.*(中国|美国|日本|韩国|新加坡).*', desc: '匹配特定国家群组' }
-            ]
-        },
-        {
-            category: '排除/过滤',
-            bot: '通用',
-            examples: [
-                { name: '排除测试群', regex: '^(?!.*(test|测试|Test)).*', desc: '排除包含test或测试的群组' },
-                { name: '排除广告群', regex: '^(?!.*(广告|AD|推广)).*', desc: '排除广告相关群组' },
-                { name: '排除私密群', regex: '^(?!.*(私密|内部|VIP)).*', desc: '排除私密群组' },
-                { name: '只要公开群', regex: '^(?!.*私有).*', desc: '只匹配公开群组' }
+                { name: '匹配链接和标题（通用格式）', regex: '(https?://t\\.me/[a-zA-Z0-9_]+)\\s*[\\-|:：]?\\s*(.+)', desc: '同时提取链接和标题，格式：链接 - 标题 或 链接：标题' },
+                { name: '匹配标题和链接（标题在前）', regex: '(.+?)\\s*[\\-|:：]?\\s*(https?://t\\.me/[a-zA-Z0-9_]+)', desc: '同时提取标题和链接，格式：标题 - 链接 或 标题：链接' },
+                { name: '匹配@用户名和标题', regex: '(@[a-zA-Z0-9_]+)\\s*[\\-|:：]?\\s*(.+)', desc: '同时提取@用户名和标题' },
+                { name: '匹配带括号的格式', regex: '(.+?)\\s*[【\\[\\(]\\s*(https?://t\\.me/[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+)\\s*[】\\]\\)]', desc: '提取：标题【链接】或 标题[链接] 格式' },
+                { name: '匹配joinchat链接和标题', regex: '(https?://t\\.me/(?:joinchat|\\+)[a-zA-Z0-9_-]+)\\s*[\\-|:：]?\\s*(.+)', desc: '同时提取私有群组链接和标题' },
+                { name: '过滤包含关键词的标题', regex: '(https?://t\\.me/[a-zA-Z0-9_]+)\\s*[\\-|:：]?\\s*(.*(crypto|bitcoin|区块链).*)', desc: '只匹配标题包含crypto/bitcoin/区块链的群组' },
+                { name: '过滤中文标题', regex: '(https?://t\\.me/[a-zA-Z0-9_]+)\\s*[\\-|:：]?\\s*(.*[\u4e00-\u9fa5]+.*)', desc: '只匹配包含中文标题的群组' },
+                { name: '排除测试群', regex: '(https?://t\\.me/[a-zA-Z0-9_]+)\\s*[\\-|:：]?\\s*(?!.*(test|测试))(.+)', desc: '排除标题包含test或测试的群组' }
             ]
         }
     ],
